@@ -3,6 +3,7 @@ package main
 //
 import (
 	"fmt"
+	"io"
 	"net"
 	"sync"
 )
@@ -74,6 +75,27 @@ func (this *Server) Handler(conn net.Conn) {
 	//广播用户上线的消息
 	this.Transfer(user, "the user has logging")
 
+	//接受客户端发送的消息
+	go func() {
+		buf := make([]byte, 4096)
+		for {
+			n, err := conn.Read(buf)
+			if err != nil && err != io.EOF {
+				fmt.Println("conn read err", err)
+				return
+			}
+			if n == 0 {
+				this.Transfer(user, "logging out...")
+			}
+
+			//提取用户的消息，并去除'\n'
+			msg := string(buf[:n-1])
+
+			//广播
+			this.Transfer(user, msg)
+		}
+
+	}()
 	//当前handler阻塞，避免go层死亡
 	select {}
 }
