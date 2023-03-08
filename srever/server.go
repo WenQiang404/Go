@@ -72,7 +72,7 @@ func (this *Server) Handler(conn net.Conn) {
 	this.mapLock.Unlock()
 
 	//广播用户上线的消息
-	this.Transfer(user, "当前用户已上线")
+	this.Transfer(user, "the user has logging")
 
 	//当前handler阻塞，避免go层死亡
 	select {}
