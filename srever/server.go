@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 )
 
 type Server struct {
@@ -66,7 +67,8 @@ func (this *Server) Handler(conn net.Conn) {
 	user := NewUser(conn, this)
 	//用户上线
 	user.Online()
-
+	//监听用户是否活跃的channel
+	isLive := make(chan bool)
 	//接受客户端发送的消息
 	go func() {
 		buf := make([]byte, 4096)
@@ -86,11 +88,28 @@ func (this *Server) Handler(conn net.Conn) {
 
 			//用户对消息进行处理
 			user.DoMessage(msg)
+			//当前用户活跃
+			isLive <- true
 		}
 
 	}()
 	//当前handler阻塞，避免go层死亡
-	select {}
+	for {
+		select {
+		case <-isLive:
+			//当前用户活跃，需要重置定时器
+			//不做任何事情，为了激活下面的定时器
+		case <-time.After(time.Second * 10):
+			//已经超时
+			//将当前的user强制关闭
+			user.SendMessage("time out")
+			close(user.Channel)
+			conn.Close()
+			user.Offline()
+			return
+
+		}
+	}
 }
 
 //创建广播方法
@@ -121,3 +140,6 @@ func (this *Server) ListenMessage() {
 // }
 
 //添加channel管道，广播总消息
+
+//需要处理关闭channel的情况，否则for会一直阻塞下去，导致cpu飙升
+//强踢功能bug：未处理OnlineMap，导致其他用户还可以看到该用户在线(√)
