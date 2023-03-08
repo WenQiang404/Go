@@ -63,17 +63,9 @@ func (this *Server) Start() {
 func (this *Server) Handler(conn net.Conn) {
 
 	//创建一个user
-	user := NewUser(conn)
-	//当前连接的业务
-	// fmt.Println("success to connect!")
+	user := NewUser(conn, this)
 	//用户上线
-	//因为要向OnlineMap中写入数据，所以需要先上锁
-	this.mapLock.Lock()
-	this.OnlineMap[user.Name] = user
-	this.mapLock.Unlock()
-
-	//广播用户上线的消息
-	this.Transfer(user, "the user has logging")
+	user.Online()
 
 	//接受客户端发送的消息
 	go func() {
@@ -85,14 +77,15 @@ func (this *Server) Handler(conn net.Conn) {
 				return
 			}
 			if n == 0 {
-				this.Transfer(user, "logging out...")
+				user.Offline()
+				return
 			}
 
 			//提取用户的消息，并去除'\n'
 			msg := string(buf[:n-1])
 
-			//广播
-			this.Transfer(user, msg)
+			//用户对消息进行处理
+			user.DoMessage(msg)
 		}
 
 	}()
