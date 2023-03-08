@@ -101,6 +101,27 @@ func (this *User) DoMessage(msg string) {
 			this.SendMessage("success")
 
 		}
+	} else if len(msg) > 4 && msg[:3] == "to|" {
+		//获取用户名
+		remoteName := strings.Split(msg, "|")[1]
+		if remoteName == "" {
+			this.SendMessage("err! plesse use 'to|xxx' \n")
+			return
+		}
+		//根据用户名，得到对方user对象
+		remoteUser, ok := this.server.OnlineMap[remoteName]
+		if !ok {
+			this.SendMessage("user not found")
+			return
+		}
+		content := strings.Split(msg, "|")[2]
+
+		if content == "" {
+			this.SendMessage("there is no message to send")
+			return
+		}
+		remoteUser.SendMessage(this.Name + " say to you :" + content)
+
 	} else {
 		this.server.Transfer(this, msg)
 	}
