@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"net"
+	"os"
 )
 
 type Client struct {
@@ -35,6 +37,13 @@ func NewClient(serverIp string, serverPort int) *Client {
 
 }
 
+//需要一个goroutine持续监听服务器端返回的消息
+func (client *Client) DealResponse() {
+	//一旦client.conn有数据，就直接copy到stdout标准输出上，永久阻塞监听
+	io.Copy(os.Stdout, client.conn)
+}
+
+//菜单显示功能
 func (client *Client) menu() bool {
 	var flag int
 	fmt.Println("1.公聊模式")
@@ -54,6 +63,23 @@ func (client *Client) menu() bool {
 
 }
 
+//更新用户名功能
+func (client *Client) UpdateName() bool {
+	fmt.Println("please input you name")
+	fmt.Scanln(&client.Name)
+
+	sendMsg := "rename|" + client.Name + "/n"
+
+	_, err := client.conn.Write([]byte(sendMsg))
+	if err != nil {
+		fmt.Println("connect.Write err", err)
+		return false
+
+	}
+	return true
+}
+
+//启动客户端服务
 func (client *Client) Run() {
 	for client.flag != 0 { //循环判断客户端不退出
 		for !client.menu() {
@@ -68,7 +94,7 @@ func (client *Client) Run() {
 			fmt.Println("private chat")
 			break
 		case 3:
-			fmt.Println("change your username")
+			client.UpdateName()
 			break
 		}
 
@@ -95,8 +121,10 @@ func main() {
 		return
 	}
 
-	fmt.Println(">>>>>>>>success to connect")
+	//单独开启一个goroutine
 
+	fmt.Println(">>>>>>>>success to connect")
+	go client.DealResponse()
 	//启动客户端服务
 	client.Run()
 
