@@ -48,7 +48,7 @@ func (client *Client) menu() bool {
 	var flag int
 	fmt.Println("1.公聊模式")
 	fmt.Println("2.私聊模式")
-	fmt.Println("3.更行用户名")
+	fmt.Println("3.更新用户名")
 	fmt.Println("0.退出")
 
 	fmt.Scanln(&flag)
@@ -63,7 +63,73 @@ func (client *Client) menu() bool {
 
 }
 
-//更新用户名功能
+//1.公聊模式
+func (client *Client) PublicChat() {
+	var chatMsg string
+
+	fmt.Println(">>>>>>please input the message,'exit' to end")
+	fmt.Scanln(&chatMsg)
+
+	for chatMsg != "exit" {
+		//send to the server
+		if len(chatMsg) != 0 {
+			sendMsg := chatMsg + "\n"
+			_, err := client.conn.Write([]byte(sendMsg))
+			if err != nil {
+				fmt.Println("conn write err:", err)
+				break
+			}
+		}
+
+		chatMsg = ""
+		fmt.Println(">>>>>>please input the message,'exit' to end")
+		fmt.Scanln(&chatMsg)
+	}
+}
+
+//2.私聊模式
+//2.1查询在线用户
+func (client *Client) FindUser() {
+	sendMsg := "who\n"
+	_, err := client.conn.Write([]byte(sendMsg))
+	if err != nil {
+		fmt.Println("conn Write err :", err)
+		return
+	}
+
+}
+func (client *Client) PrivateChat() {
+	var remoteName string
+	var chatMsg string
+
+	client.FindUser()
+	fmt.Println("please input the user you want to chat Privacy,'exit' to quit")
+	fmt.Scanln(&remoteName)
+
+	for remoteName != "exit" {
+		fmt.Println(">>>>please input the message,'exit' to quit")
+		fmt.Scanln(&chatMsg)
+		for chatMsg != "exit" {
+			//消息不为空则发送
+			if len(chatMsg) != 0 {
+				sendMsg := "to|" + remoteName + "|" + chatMsg + "\n\n"
+				_, err := client.conn.Write([]byte(sendMsg))
+				if err != nil {
+					fmt.Println("conn Write err:", err)
+					break
+				}
+			}
+
+			chatMsg = ""
+			fmt.Println(">>>>>>please input the message,'exit' to end")
+			fmt.Scanln(&chatMsg)
+		}
+		break
+
+	}
+}
+
+//3.更新用户名功能
 func (client *Client) UpdateName() bool {
 	fmt.Println("please input you name")
 	fmt.Scanln(&client.Name)
@@ -88,10 +154,10 @@ func (client *Client) Run() {
 		//根据不同的模式处理不同的业务
 		switch client.flag {
 		case 1:
-			fmt.Println("public chat")
+			client.PublicChat()
 			break
 		case 2:
-			fmt.Println("private chat")
+			client.PrivateChat()
 			break
 		case 3:
 			client.UpdateName()
